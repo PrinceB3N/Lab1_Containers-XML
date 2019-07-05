@@ -17,17 +17,12 @@ import org.xml.sax.SAXException;
 public class XML {
     private HashMap<BitSet,String> codeMap;
     private HashMap<BitSet,Float> productMap;
-    private static final int codeLength=9;
+    private static final int CODE_LENGTH=9;
+    private static final int BARCODE_LENGTH=45;
+    
     public XML(String codefilename, String xml_binaryname,String xml_charname, String productfilename, String xml_prodname, String xml_pricename) throws ParserConfigurationException,SAXException,IOException{
         codeMap=this.getCodeMapFrom(codefilename,xml_binaryname,xml_charname);
         productMap=this.getProductMapFrom(productfilename, xml_prodname, xml_pricename);
- 
-        Iterator it = productMap.entrySet().iterator();
-        while (it.hasNext()) {
-            HashMap.Entry pair = (HashMap.Entry)it.next();
-            System.out.println(pair.getKey() + " = " + pair.getValue());
-            //it.remove(); // avoids a ConcurrentModificationException
-        }
     }
     private HashMap<BitSet,String> getCodeMapFrom(String sfilename,String binary,String character) throws ParserConfigurationException,SAXException,IOException{
         HashMap<BitSet,String> hSet=new HashMap<BitSet,String>();
@@ -69,62 +64,83 @@ public class XML {
     }
     
     private String deCodeProductName(BitSet bSet){
-        String codeName = bSet.toString();
+        String codeName = toBinaryString(bSet);
         String uncoded="";
-        for(int i=0;i<codeName.length()/codeLength;i++){
-            BitSet temp = fromString(codeName.substring(i*codeLength, (i+1)*codeLength));
+        for(int i=0;i<codeName.length()/CODE_LENGTH;i++){
+            BitSet temp = fromString(codeName.substring(i*CODE_LENGTH, (i+1)*CODE_LENGTH));
             uncoded+=codeMap.get(temp);
         }
         
         return uncoded;
     }
     private float getPrice(BitSet bSet){
-        return productMap.get(bSet);
+        try{
+            return productMap.get(bSet);
+        }
+        catch (NullPointerException e){
+            System.out.println("Sorry, we don't have that item in our database. Disregard it.");
+            return 0.0f;
+        }
     }
     private static BitSet fromString(String binary) {
         BitSet bitset = new BitSet(binary.length());
-        int len = binary.length();
-        for (int i = len-1; i >= 0; i--) {
-            if (binary.charAt(i) == '1') {
-                bitset.set(len-i-1);
+            for (int i = 0; i < binary.length(); i++) {
+                if (binary.charAt(i) == '1') {
+                    bitset.set(i);
+                }
             }
-        }
-        return bitset;
+            return bitset;
+    }
+    private static String toBinaryString(BitSet bSet){
+            StringBuilder sBuild = new StringBuilder();
+            
+            for( int i = 0; i < bSet.length();  i++ )
+            {
+                sBuild.append( bSet.get( i ) == true ? 1: 0 );
+            }
+            for(int x=sBuild.length();x<BARCODE_LENGTH;x++){
+                sBuild.append(0);
+            }
+            
+            return sBuild.toString();
     }
     private void printReceipt(ArrayList<BitSet> cartList){
         float total = 0.0f;
-        System.out.println("Printing Receipt...");
+        float temp=0.0f;
         for(BitSet i:cartList){
-            System.out.println("Barcode Label: "+ i.toString());
+            System.out.println("Barcode Label: "+ toBinaryString(i));
             System.out.println("Product Name: "+this.deCodeProductName(i));
-            System.out.println("Price: "+this.getPrice(i));
+            temp=this.getPrice(i);
+            System.out.println("Price: "+temp);
             System.out.println("----------------------");
             
-            total+=this.getPrice(i);
+            total+=temp;
         }
         
-        System.out.println("\n\nTotal: "+total);
+        System.out.println("\n===========\nTotal: "+total+"\n===========\n");
    
     }
     public void processCarts(String sfilename, String itemname) throws ParserConfigurationException,SAXException,IOException{
             
             XMLHandler xml = new XMLHandler();
             Document doc = xml.ReadXML(sfilename);
-            NodeList nList = xml.GetNodes(doc, sfilename);
+            NodeList nList = xml.GetNodes(doc, "Cart");
             
             for(int i=0;i<nList.getLength();i++){
                 Node nNode=nList.item(i);
                 ArrayList<BitSet> cartList=new ArrayList<BitSet>();
                 if(nNode.getNodeType()==Node.ELEMENT_NODE){
-                    NodeList innerList = nNode.getChildNodes();
+                    Element eElement = (Element) nNode;
+                    NodeList innerList = eElement.getElementsByTagName(itemname);
+                    
                     for(int x=0;x<innerList.getLength();x++){
                         Node innerNode = innerList.item(x);
-                        if(nNode.getNodeType()==Node.ELEMENT_NODE){
-                            Element eElement = (Element) nNode;
-                            cartList.add(BitSet.valueOf(eElement.getElementsByTagName("Item").item(0).getTextContent().getBytes()));
+                        if(innerNode.getNodeType()==Node.ELEMENT_NODE){
+                            Element innerElement = (Element) innerNode;
+                            cartList.add(fromString(innerElement.getTextContent()));
                         }
                         
-                    }
+                    } 
                     System.out.println("Printing Receipt for Cart "+i+"...");
                     this.printReceipt(cartList);
                 }
