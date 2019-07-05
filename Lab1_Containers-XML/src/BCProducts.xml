@@ -1,3 +1,4 @@
+<Products>
 <Product>
 	<Barcode>100001001001001100100000110011000100001011000000</Barcode>
 	<Price>16.60</Price>
@@ -1266,3 +1267,4 @@
 	<Barcode></Barcode>
 	<Price>8.62</Price>
 </Product>
+</Products>
