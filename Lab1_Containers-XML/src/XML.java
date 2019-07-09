@@ -12,7 +12,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 
 public class XML {
     private HashMap<BitSet,String> codeMap;
@@ -79,7 +80,7 @@ public class XML {
         }
         catch (NullPointerException e){
             System.out.println("Sorry, we don't have that item in our database. Disregard it.");
-            return 0.0f;
+            return 0.00f;
         }
     }
     private static BitSet fromString(String binary) {
@@ -107,17 +108,18 @@ public class XML {
     private void printReceipt(ArrayList<BitSet> cartList){
         float total = 0.0f;
         float temp=0.0f;
+        DecimalFormat df = new DecimalFormat("0.00");
         for(BitSet i:cartList){
             System.out.println("Barcode Label: "+ toBinaryString(i));
             System.out.println("Product Name: "+this.deCodeProductName(i));
             temp=this.getPrice(i);
-            System.out.println("Price: "+temp);
+            System.out.println("Price: $"+df.format(temp));
             System.out.println("----------------------");
             
             total+=temp;
         }
         
-        System.out.println("\n===========\nTotal: "+total+"\n===========\n");
+        System.out.println("\n===========\nTotal: $"+df.format(total)+"\n===========\n");
    
     }
     public void processCarts(String sfilename, String itemname) throws ParserConfigurationException,SAXException,IOException{
